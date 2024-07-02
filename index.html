@@ -176,10 +176,15 @@
 
         animate();
 
-        window.addEventListener('click', (event) => {
+        function handleInteraction(event) {
+            const x = event.clientX || (event.touches && event.touches[0].clientX);
+            const y = event.clientY || (event.touches && event.touches[0].clientY);
+
+            if (x === undefined || y === undefined) return;
+
             const mouse = new THREE.Vector2(
-                (event.clientX / window.innerWidth) * 2 - 1,
-                -(event.clientY / window.innerHeight) * 2 + 1
+                (x / window.innerWidth) * 2 - 1,
+                -(y / window.innerHeight) * 2 + 1
             );
 
             const raycaster = new THREE.Raycaster();
@@ -190,7 +195,10 @@
             if (intersects.length > 0) {
                 document.getElementById('formOverlay').style.display = 'block';
             }
-        });
+        }
+
+        window.addEventListener('click', handleInteraction);
+        window.addEventListener('touchstart', handleInteraction);
 
         document.getElementById('closeForm').addEventListener('click', () => {
             document.getElementById('formOverlay').style.display = 'none';
