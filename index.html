@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>korax</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: white; font-family: 'Orbitron', Arial, sans-serif; }
+        canvas { display: block; }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+        #formOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+        #formContainer {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(50, 50, 50, 0.8);
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+            color: #fff;
+            max-width: 400px;
+            width: 100%;
+        }
+        #closeForm {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            cursor: pointer;
+            font-size: 24px;
+            color: #aaa;
+            transition: color 0.3s;
+        }
+        #closeForm:hover {
+            color: #fff;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        input, textarea {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 5px;
+            color: #fff;
+            font-family: 'Orbitron', Arial, sans-serif;
+        }
+        input::placeholder, textarea::placeholder {
+            color: #aaa;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-family: 'Orbitron', Arial, sans-serif;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #formMessage {
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div id="formOverlay">
+        <div id="formContainer">
+            <span id="closeForm">&times;</span>
+            <form id="contactForm" action="https://formspree.io/f/xnnaqdwr" method="POST">
+                <input type="email" name="email" placeholder="get in touch" required>
+                <button type="submit">send</button>
+            </form>
+            <div id="formMessage"></div>
+        </div>
+    </div>
+
+    <script>
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        scene.background = new THREE.Color(0xffffff);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(2);
+        document.body.appendChild(renderer.domElement);
+
+        camera.position.z = 50;
+
+        const asciiChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?';
+
+        function createTextSprite(text, size = 64, color = 'black', font = 'Orbitron') {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = size * text.length;
+            canvas.height = size * 1.5;
+            context.font = `bold ${size}px ${font}, sans-serif`;
+            context.fillStyle = color;
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText(text, canvas.width / 2, canvas.height / 2);
+
+            const texture = new THREE.Texture(canvas);
+            texture.needsUpdate = true;
+
+            const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.scale.set(text.length * 5, 7.5, 1);
+            return sprite;
+        }
+
+        function createSpline() {
+            const curvePoints = [];
+            for (let i = 0; i < 8; i++) {
+                curvePoints.push(new THREE.Vector3(
+                    Math.random() * 80 - 40,
+                    Math.random() * 80 - 40,
+                    Math.random() * 80 - 40
+                ));
+            }
+            return new THREE.CatmullRomCurve3(curvePoints);
+        }
+
+        const splines = [];
+        const characters = [];
+
+        for (let i = 0; i < 15; i++) {
+            splines.push(createSpline());
+        }
+
+        for (let i = 0; i < 2000; i++) {
+            const char = asciiChars[Math.floor(Math.random() * asciiChars.length)];
+            const sprite = createTextSprite(char);
+            sprite.scale.set(0.5, 0.5, 0.5);
+            scene.add(sprite);
+            characters.push({
+                sprite: sprite,
+                spline: splines[Math.floor(Math.random() * splines.length)],
+                t: Math.random(),
+                speed: 0.0002 + Math.random() * 0.001
+            });
+        }
+
+        const koraxSprite = createTextSprite("KORAX", 128, 'black', 'Orbitron');
+        koraxSprite.position.set(0, 0, 0);
+        scene.add(koraxSprite);
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            characters.forEach(char => {
+                char.t = (char.t + char.speed) % 1;
+                const position = char.spline.getPoint(char.t);
+                char.sprite.position.copy(position);
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        window.addEventListener('click', (event) => {
+            const mouse = new THREE.Vector2(
+                (event.clientX / window.innerWidth) * 2 - 1,
+                -(event.clientY / window.innerHeight) * 2 + 1
+            );
+
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+
+            const intersects = raycaster.intersectObject(koraxSprite);
+
+            if (intersects.length > 0) {
+                document.getElementById('formOverlay').style.display = 'block';
+            }
+        });
+
+        document.getElementById('closeForm').addEventListener('click', () => {
+            document.getElementById('formOverlay').style.display = 'none';
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(2);
+        });
+
+        const form = document.getElementById('contactForm');
+        const messageDiv = document.getElementById('formMessage');
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(form);
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Accept': 'application/json'
+                }
+            }).then(response => {
+                if (response.ok) {
+                    messageDiv.textContent = "we'll be in touch";
+                    form.reset();
+                } else {
+                    response.json().then(data => {
+                        if (Object.hasOwn(data, 'errors')) {
+                            messageDiv.textContent = data["errors"].map(error => error["message"]).join(", ");
+                        } else {
+                            messageDiv.textContent = "Oops! There was a problem submitting your form";
+                        }
+                    })
+                }
+            }).catch(error => {
+                messageDiv.textContent = "Oops! There was a problem submitting your form";
+            });
+        });
+    </script>
+</body>
+</html>
