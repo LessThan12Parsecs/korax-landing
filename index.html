@@ -92,7 +92,8 @@
     <div id="formOverlay">
         <div id="formContainer">
             <span id="closeForm">&times;</span>
-            <form id="contactForm" netlify>
+            <form id="contactForm" method="POST" data-netlify="true" netlify>
+                <input type="hidden" name="form-name" value="contact">
                 <input type="email" name="email" placeholder="get in touch" required>
                 <button type="submit">send</button>
             </form>
@@ -301,26 +302,21 @@
         form.addEventListener('submit', function(e) {
             e.preventDefault();
             const formData = new FormData(form);
-            fetch(form.action, {
+            fetch('/', {
                 method: 'POST',
-                body: formData,
-                headers: {
-                    'Accept': 'application/json'
-                }
-            }).then(response => {
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams(formData).toString()
+            })
+            .then(response => {
                 if (response.ok) {
                     messageDiv.textContent = "we'll be in touch";
                     form.reset();
                 } else {
-                    response.json().then(data => {
-                        if (Object.hasOwn(data, 'errors')) {
-                            messageDiv.textContent = data["errors"].map(error => error["message"]).join(", ");
-                        } else {
-                            messageDiv.textContent = "oops! there was a problem ";
-                        }
-                    })
+                    throw new Error('Network response was not ok.');
                 }
-            }).catch(error => {
+            })
+            .catch(error => {
+                console.error('Error:', error);
                 messageDiv.textContent = "oops! there was a problem";
             });
         });
